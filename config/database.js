@@ -5,7 +5,7 @@ const pool = mysql.createPool({
     user: 'wantsadmin',
     port: '3306',
     password: 'wants-rds',
-    database: 'covac'
+    database: 'goback'
 });
 
 module.exports = {
