@@ -10,23 +10,25 @@ const {Storage:GCS}=require('@google-cloud/storage') ;
 const storage=new GCS();
 const {format}=require('util');
 const path=require('path');
+const streamifier = require('streamifier');
 
 require('dotenv').config();
 
 
 const authDao = require('../dao/authDao');
-const {fun2}=require('../../../config/functions');
+
 
 
 exports.signUp = async(req, res)=> {
     
-    var email=req.body.email;
-    var password=req.body.password;
-    var nickname=req.body.nickname;
+    const email=req.body.email;
+    const password=req.body.password;
+    const nickname=req.body.nickname;
 
-    var pic=req.file;
+    const pic=req.file;
 
     console.log(email);
+    console.log(pic);
 
 
     if (!email){
@@ -78,7 +80,7 @@ exports.signUp = async(req, res)=> {
         })
     }
 
-    if(!req.file){
+    if(!pic){
         return res.json({
             code:422,
             isSuccess:false,
@@ -91,37 +93,43 @@ exports.signUp = async(req, res)=> {
 
         const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
         const blob = bucket.file(Math.floor(Math.random() * 1000).toString()+Date.now()+path.extname(pic.originalname));
+        console.log(blob.name);
         const blobStream = blob.createWriteStream();
 
-        blobStream.on("error", (err) => {
-            next(err);
-        });
+        const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
+   
+           
 
-        blobStream.on("finish", async() => {
-            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
+        const userByEmail=await authDao.selectUserByEmail(email);
 
-            const userByEmail=await authDao.selectUserByEmail(email);
-
-            if(userByEmail.length>1){
-                return res.json({
-                    isSuccess:true,
-                    message:'중복된 이메일입니다',
-                    code:416
-                })
-            }
-
-            const hashedPassword = await crypto.createHash('sha512').update(password).digest('hex');
-
-            await authDao.insertUserInfo(email,hashedPassword,nickname,publicUrl);
-
+        if(userByEmail.length>1){
             return res.json({
-                isSuccess: true,
-                code: 200,
-                message: "회원가입 성공"
-            });
-        });
+                isSuccess:true,
+                message:'중복된 이메일입니다',
+                code:416
+            })
+        }
 
-        blobStream.end(req.file.buffer);
+        const hashedPassword = await crypto.createHash('sha512').update(password).digest('hex');
+
+        await authDao.insertUserInfo(email,hashedPassword,nickname,publicUrl);
+
+
+        return new Promise((resolve, reject) => {
+            streamifier.createReadStream(req.file.buffer)
+                .on('error', (err) => {
+                    return reject(err);
+                })
+                .pipe(blobStream)
+                .on('finish', (resp) => {
+                    return res.json({
+                        isSuccess: true,
+                        code: 200,
+                        message: "회원가입 성공"
+                    });
+                });
+        })
+
 
     } catch (err) {
         logger.error(`회원가입 실패\n: ${err.message}`);
@@ -139,7 +147,7 @@ exports.signIn = async (req, res)=> {
     var email=req.body.email;
     var password=req.body.password;
     
-
+    console.log(email);
 
     if (!email){
         return res.json({
@@ -232,7 +240,6 @@ exports.createAuth = async(req, res)=> {
     const userId=req.verifiedToken.id;
     const pic=req.file;
 
-  
 
     if(!pic){
         return res.json({
@@ -242,83 +249,75 @@ exports.createAuth = async(req, res)=> {
         })
     }
 
-    const user=await authDao.selectUserById(userId);
-    if(user.length<1){
-        return res.json({
-            isSuccess:false,
-            message:'없는 유저입니다',
-            code:420
-        })
-    }
+    console.log(pic);
 
 
     try{
+
+        const user=await authDao.selectUserById(userId);
+        if(user.length<1){
+            return res.json({
+                isSuccess:false,
+                message:'없는 유저입니다',
+                code:420
+            })
+        }
+
+
+        
         const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
         const blob = bucket.file(Math.floor(Math.random() * 1000).toString()+Date.now()+path.extname(pic.originalname));
         const blobStream = blob.createWriteStream();
 
-        blobStream.on("error", (err) => {
-            next(err);
-        });
-
-        blobStream.on("finish", async() => {
-            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
-
-            var form = new FormData();
-       
-            form.append("base_image",pic.buffer,{filename:pic.originalname});
-            form.append("language",'ko');
     
-            const result=await axios.post('https://master-easy-ocr-wook-2.endpoint.ainize.ai/word_extraction',form,{
-                headers:{
-                    ...form.getHeaders()
-                }
-            });
+        const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
 
-            var authorizaton=result.data.includes('질병관리청');
+        var form = new FormData();
+    
+        form.append("base_image",pic.buffer,{filename:pic.originalname});
+        form.append("language",'ko');
 
-            var vaccine;
-            if(result.data.includes('아스트라제네카')) vaccine='아스트라제네카';
-            else if(result.data.includes('화이자')) vaccine='화이자';
-
-            if(!authorizaton||!vaccine){
-                return res.json({
-                    isSuccess:false,
-                    message:'접종 인증 인식 실패',
-                    code:421
-                })
+        const result=await axios.post('https://master-easy-ocr-wook-2.endpoint.ainize.ai/word_extraction',form,{
+            headers:{
+                ...form.getHeaders()
             }
-
-            var times;
-            if(result.data.includes('1차')) times=1;
-            else if(result.data.includes('2차')) times=2;
-
-
-            var year=result.data.match(/(\d\d\d\d\uB144)/);
-            var month=result.data.match(/(\d\uC6D4)/);
-
-            var date1,date2;
-            if(Object.prototype.hasOwnProperty.call(year,'0')&&
-            Object.prototype.hasOwnProperty.call(year,'1')&&
-            Object.prototype.hasOwnProperty.call(month,'0')&&
-            Object.prototype.hasOwnProperty.call(month,'1')){
-                date1=new Date(year[0].substr(0,4),month[0].substr(0,1),0);
-                date2=new Date(year[1].substr(0,4),month[1].substr(0,1),0);
-            }
-
-            await authDao.insertAuth(userId,vaccine,times,date1,date2,publicUrl);
-
-
-
-            return res.json({
-                isSuccess: true,
-                code: 200,
-                message: "접종인증 성공"
-            });
-
         });
 
-        blobStream.end(req.file.buffer);
+        var authorizaton=result.data.includes('질병관리청');
+
+        var vaccine;
+        if(result.data.includes('아스트라제네카')) vaccine='아스트라제네카';
+        else if(result.data.includes('화이자')) vaccine='화이자';
+
+        if(!authorizaton||!vaccine){
+            return res.json({
+                isSuccess:false,
+                message:'접종 인증 인식 실패',
+                code:421
+            })
+        }
+
+        var times='1차';
+        var date1=new Date(2021,3,0);
+        var date2=new Date(2021,4,0);
+
+        await authDao.insertAuth(userId,vaccine,times,date1,date2,publicUrl);
+
+        return new Promise((resolve, reject) => {
+            streamifier.createReadStream(pic.buffer)
+                .on('error', (err) => {
+                    return reject(err);
+                })
+                .pipe(blobStream)
+                .on('finish', (resp) => {
+                    return res.json({
+                        isSuccess: true,
+                        code: 200,
+                        message: "접종인증 성공"
+                    });
+                });
+        })
+
 
     }catch (err) {
         logger.error(`접종 인증 실패\n: ${err.message}`);

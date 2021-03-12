@@ -11,10 +11,6 @@ exports.fun1=async(query,param)=>{
     return result;
 }
 
-exports.fun2=(text)=>{
-  const len=text.length;
-  return text.substr(1,len-2);
-}
 
 
 

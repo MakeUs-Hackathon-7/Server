@@ -1,17 +1,19 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const Multer=require('multer');
+const multer=require('multer');
 
 
-const upload = Multer({
-    storage: Multer.memoryStorage(),
+
+const upload = multer({
+    storage: multer.memoryStorage(),
     limits: {
-      fileSize: 5 * 1024 * 1024, 
+      fileSize: 5 *1024 * 1024, 
     },
 });
 
 exports.upload=upload;
+
 
 
 

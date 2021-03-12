@@ -12,6 +12,8 @@ module.exports = function () {
 
     app.use(express.urlencoded({extended: true}));
 
+    app.use(express.static('uploads'));
+
     app.use(methodOverride());
 
     app.use(cors());
