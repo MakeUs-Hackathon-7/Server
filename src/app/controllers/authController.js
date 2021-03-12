@@ -20,9 +20,9 @@ const {fun2}=require('../../../config/functions');
 
 exports.signUp = async(req, res)=> {
     
-    var email=fun2(req.email);
-    var password=fun2(req.password);
-    var nickname=fun2(req.nickname);
+    var email=fun2(req.body.email);
+    var password=fun2(req.body.password);
+    var nickname=fun2(req.body.nickname);
 
     var pic=req.file;
 
