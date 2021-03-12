@@ -22,6 +22,8 @@ exports.signUp = async(req, res)=> {
         email, password,nickname
     } = req.body;
 
+    const pic=req.file;
+
     if (!email){
         return res.json({
             isSuccess: false, 
@@ -71,29 +73,50 @@ exports.signUp = async(req, res)=> {
         })
     }
 
+    if(!req.file){
+        return res.json({
+            code:422,
+            isSuccess:false,
+            message:'프로필 사진을 입력해주세요'
+        })
+    }
 
   
     try {
 
-        const userByEmail=await authDao.selectUserByEmail(email);
+        const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
+        const blob = bucket.file(Math.floor(Math.random() * 1000).toString()+Date.now()+path.extname(pic.originalname));
+        const blobStream = blob.createWriteStream();
 
-        if(userByEmail.length>1){
-            return res.json({
-                isSuccess:true,
-                message:'중복된 이메일입니다',
-                code:416
-            })
-        }
-
-        const hashedPassword = await crypto.createHash('sha512').update(password).digest('hex');
-
-        await authDao.insertUserInfo(email,hashedPassword,nickname);
-
-        return res.json({
-            isSuccess: true,
-            code: 200,
-            message: "회원가입 성공"
+        blobStream.on("error", (err) => {
+            next(err);
         });
+
+        blobStream.on("finish", async() => {
+            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
+
+            const userByEmail=await authDao.selectUserByEmail(email);
+
+            if(userByEmail.length>1){
+                return res.json({
+                    isSuccess:true,
+                    message:'중복된 이메일입니다',
+                    code:416
+                })
+            }
+
+            const hashedPassword = await crypto.createHash('sha512').update(password).digest('hex');
+
+            await authDao.insertUserInfo(email,hashedPassword,nickname,publicUrl);
+
+            return res.json({
+                isSuccess: true,
+                code: 200,
+                message: "회원가입 성공"
+            });
+        });
+
+        blobStream.end(req.file.buffer);
 
     } catch (err) {
         logger.error(`회원가입 실패\n: ${err.message}`);
@@ -203,7 +226,7 @@ exports.createAuth = async(req, res)=> {
     if(!pic){
         return res.json({
             isSuccess:false,
-            message:'사진을 입력해주세요',
+            message:'접종인증 사진을 입력해주세요',
             code:419
         })
     }
@@ -220,7 +243,7 @@ exports.createAuth = async(req, res)=> {
 
     try{
         const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
-        const blob = bucket.file('123'+path.extname(pic.originalname));
+        const blob = bucket.file(Math.floor(Math.random() * 1000).toString()+Date.now()+path.extname(pic.originalname));
         const blobStream = blob.createWriteStream();
 
         blobStream.on("error", (err) => {

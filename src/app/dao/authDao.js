@@ -17,11 +17,11 @@ exports.selectUserById=(id)=>{
 }
 
 
-exports.insertUserInfo=(email,hashedPassword,nickname)=>{
+exports.insertUserInfo=(email,hashedPassword,nickname,publicUrl)=>{
   const query= `
-    INSERT INTO User(email,password,nickname) VALUES(?,?,?);
+    INSERT INTO User(email,password,nickname,publicUrl) VALUES(?,?,?,?);
   `;
-  const param=[email,hashedPassword,nickname];
+  const param=[email,hashedPassword,nickname,publicUrl];
   return fun1(query,param);
 }
 
