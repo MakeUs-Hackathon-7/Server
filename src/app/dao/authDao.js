@@ -19,7 +19,7 @@ exports.selectUserById=(id)=>{
 
 exports.insertUserInfo=(email,hashedPassword,nickname,publicUrl)=>{
   const query= `
-    INSERT INTO User(email,password,nickname,publicUrl) VALUES(?,?,?,?);
+    INSERT INTO User(email,password,nickname,profileImg) VALUES(?,?,?,?);
   `;
   const param=[email,hashedPassword,nickname,publicUrl];
   return fun1(query,param);
