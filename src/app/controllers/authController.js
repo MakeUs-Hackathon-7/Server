@@ -13,16 +13,21 @@ const path=require('path');
 
 require('dotenv').config();
 
-const authDao = require('../dao/authDao');
 
+const authDao = require('../dao/authDao');
+const {fun2}=require('../../../config/functions');
 
 
 exports.signUp = async(req, res)=> {
-    const {
-        email, password,nickname
-    } = req.body;
+    
+    var email=fun2(req.email);
+    var password=fun2(req.password);
+    var nickname=fun2(req.nickname);
 
-    const pic=req.file;
+    var pic=req.file;
+
+    console.log(email);
+
 
     if (!email){
         return res.json({
@@ -130,10 +135,13 @@ exports.signUp = async(req, res)=> {
 
 
 exports.signIn = async (req, res)=> {
-    const {
-        email, password
-    } = req.body;
- if (!email){
+   
+    var email=fun2(req.body.email);
+    var password=fun2(req.body.password);
+    
+
+
+    if (!email){
         return res.json({
             isSuccess: false, 
             code: 410, 
@@ -223,6 +231,9 @@ exports.createAuth = async(req, res)=> {
    
     const userId=req.verifiedToken.id;
     const pic=req.file;
+
+  
+
     if(!pic){
         return res.json({
             isSuccess:false,
