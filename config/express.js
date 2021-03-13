@@ -20,6 +20,8 @@ module.exports = function () {
    
     require('../src/app/routes/authRoute')(app);
     require('../src/app/routes/noticeRoute')(app);
+    require('../src/app/routes/mypageRoute')(app);
+    require('../src/app/routes/symptomRoute')(app);
 
     return app;
 };

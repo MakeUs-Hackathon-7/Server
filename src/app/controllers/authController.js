@@ -11,7 +11,7 @@ const storage=new GCS();
 const {format}=require('util');
 const path=require('path');
 const streamifier = require('streamifier');
-const Tesseract=require('tesseract.js');
+
 
 require('dotenv').config();
 
