@@ -36,3 +36,12 @@ exports.selectUserNotice=(userId)=>{
     return fun1(query,param);
 }
 
+
+exports.selectSymptom=(userId)=>{
+    const query= `
+        
+    `;
+    const param=[userId];
+    return fun1(query,param);
+}
+

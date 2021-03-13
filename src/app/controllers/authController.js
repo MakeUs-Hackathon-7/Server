@@ -222,7 +222,8 @@ exports.signIn = async (req, res)=> {
             code: 200,
             message: "로그인 성공",
             result:{
-                token:token
+                token:token,
+                nickname:userByEmail[0].nickname
             }
         });
 
