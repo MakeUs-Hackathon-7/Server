@@ -11,6 +11,7 @@ const storage=new GCS();
 const {format}=require('util');
 const path=require('path');
 const streamifier = require('streamifier');
+const Tesseract=require('tesseract.js');
 
 require('dotenv').config();
 
@@ -253,7 +254,7 @@ exports.createAuth = async(req, res)=> {
 
 
     try{
-
+/*
         const user=await authDao.selectUserById(userId);
         if(user.length<1){
             return res.json({
@@ -263,7 +264,7 @@ exports.createAuth = async(req, res)=> {
             })
         }
 
-
+*/
         
         const bucket = storage.bucket(process.env.GCLOUD_STORAGE_BUCKET);
         const blob = bucket.file(Math.floor(Math.random() * 1000).toString()+Date.now()+path.extname(pic.originalname));
@@ -283,7 +284,8 @@ exports.createAuth = async(req, res)=> {
             }
         });
 
-        var authorizaton=result.data.includes('질병관리청');
+        console.log(result.data);
+/*        var authorizaton=result.data.includes('질병관리청');
 
         var vaccine;
         if(result.data.includes('아스트라제네카')) vaccine='아스트라제네카';
@@ -302,14 +304,14 @@ exports.createAuth = async(req, res)=> {
         var date2=new Date(2021,4,0);
 
         await authDao.insertAuth(userId,vaccine,times,date1,date2,publicUrl);
-
+*/
         return new Promise((resolve, reject) => {
             streamifier.createReadStream(pic.buffer)
                 .on('error', (err) => {
                     return reject(err);
                 })
                 .pipe(blobStream)
-                .on('finish', (resp) => {
+                .on('finish',  (resp) => {
                     return res.json({
                         isSuccess: true,
                         code: 200,
